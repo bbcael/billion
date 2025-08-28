@@ -247,7 +247,7 @@ clear phat pci C d y ans c;
 %% for uncertainty-free version
 %p0(:,2) = 0; p1(:,2) = 0; r0(:,2); r1(:,2) = 0;
 %%
-%y = 45:49;
+y = 45:49;
 %y = 0:44; % for historical case
 nboot = 1000;
 for i = 1:nboot;
@@ -263,14 +263,14 @@ for i = 1:nboot;
     b_r1ii = r1(2,1)+randn(1).*r1(2,2);
     N = []; S = [];
     for j = 1:length(y);
-        b_n0 = poissrnd(exp(b_r0i+y(j).*b_r0ii));
-        b_n1 = poissrnd(exp(b_r1i+y(j).*b_r1ii));
-%        b_n0 = poissrnd(exp(b_r0i+44.*b_r0ii)); % for constant-frequency case
-%        b_n1 = poissrnd(exp(b_r1i+44.*b_r1ii));
-        b_d0 = gprnd(b_p0i+y(j).*b_p0iii,b_p0ii,1,1,b_n0);
-        b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*y(j),1,1,b_n1);
-        %b_d0 = gprnd(b_p0i+44.*b_p0iii,b_p0ii,1,1,b_n0); % for stationary case
-        %b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*44,1,1,b_n1);       
+        %b_n0 = poissrnd(exp(b_r0i+y(j).*b_r0ii));
+        %b_n1 = poissrnd(exp(b_r1i+y(j).*b_r1ii));
+        b_n0 = poissrnd(exp(b_r0i+44.*b_r0ii)); % for constant-frequency case
+        b_n1 = poissrnd(exp(b_r1i+44.*b_r1ii));
+        %b_d0 = gprnd(b_p0i+y(j).*b_p0iii,b_p0ii,1,1,b_n0);
+        %b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*y(j),1,1,b_n1);
+        b_d0 = gprnd(b_p0i+44.*b_p0iii,b_p0ii,1,1,b_n0); % for stationary case
+        b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*44,1,1,b_n1);       
         N(end+1:end+b_n0) = b_d0;
         S(end+1:end+b_n1) = b_d1;
     end
