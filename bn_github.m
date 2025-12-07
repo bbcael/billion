@@ -23,15 +23,21 @@ d = d./1000; % damages in billions
 close all;
 scatter(1980+y(C==1),d(C==1),100,[.5 .05 .5],'filled','markerfacealpha',0.75);
 hold on;
-scatter(1980+y(C==0),d(C==0),100,[.7 .35 .1],'filled','markerfacealpha',0.75);
 set(gca,'yscale','log','ticklabelinterpreter','latex','fontsize',18,'yticklabel',{"1","10","100"})
 box on;
 axis([1979.1 2024.9 1 225])
 ylabel('Damage [Billion 2024 USD]','interpreter','latex')
 r = corr(y,d)
+clear ans lgnd r;
+yyaxis right
+ylabel('Damage [US GDP Basis Points]','interpreter','latex')
+ylim([.3427 77.1])
+set(gca,'yscale','log','ytick',[1 2 5 10 20 50])
+yyaxis left
+scatter(1980+y(C==0),d(C==0),100,[.7 .35 .1],'filled','markerfacealpha',0.75);
 lgnd = legend('Severe Storms','Other Disasters');
 set(lgnd,'interpreter','latex','fontsize',16,'location','northwest')
-clear ans lgnd r;
+exportgraphics(gcf,'Fig1.pdf','ContentType','vector')
 
 %% show severe storms and other disasters are increasing at different rates
 Y = unique(y); 
@@ -78,10 +84,14 @@ clear mdl Y D0 D1 D i;
 [phat,pci] = mle(d(c=="Flooding")-1,'distribution','gp') %
 [phat,pci] = mle(d(c=="Freeze")-1,'distribution','gp') % too few to compute
 [phat,pci] = mle(d(c=="Winter Storm")-1,'distribution','gp') %
-[phat,pci] = mle(d(c=="Drought")-1,'distribution','gp') % except droughts, but...
 sum(c=="Drought") % but too few droughts to really take this into consideration, esp. as prevalence isn't changing
 mdl = fitglm(y(c=="Drought"),y(c=="Drought"),'linear','Distribution','poisson') % drought frequency almost identical to 'other other' disasters
 [phat,pci] = mle(d(c~="Severe Storm" & c~="Drought")-1,'distribution','gp') % not different when removing droughts
+[phat,pci] = mle(d(c~="Severe Storm" & c~="Tropical Cyclone")-1,'distribution','gp') % not different when removing droughts
+[phat,pci] = mle(d(c~="Severe Storm" & c~="Flooding")-1,'distribution','gp') % not different when removing droughts
+[phat,pci] = mle(d(c~="Severe Storm" & c~="Winter Storm")-1,'distribution','gp') % not different when removing droughts
+[phat,pci] = mle(d(c~="Severe Storm" & c~="Wildfire")-1,'distribution','gp') % not different when removing droughts
+
 clear ans phat pci mdl;
 %% show GP is a good fit – figures 2c,d
 
@@ -124,6 +134,7 @@ xlabel('GPD Quantiles [\$Bn]','interpreter','latex')
 clear ans pci phat X Y err ec tc pval;
 title('Damage Distribution of Severe Storms','interpreter','latex')
 
+exportgraphics(gcf,'Fig2.pdf','ContentType','vector')
 %% check other disaster mixture isn't changing
 D = d(c~="Severe Storm"); Y = y(c~="Severe Storm"); q = c(c~="Severe Storm");
 Q = unique(q);
@@ -139,13 +150,13 @@ t = t./norminv(.025/6) % bonferroni correction for non-storm composition
 clear D Y t;
 
 %% evaluate whether tails are increasing via quantile regression
-for i = 1:99;
-    [p,stats]=quantreg(y(C==0),d(C==0),i./100,1,1000); 
-    %[p,stats]=quantreg(y(c=="Tropical Cyclone"),d(c=="Tropical Cyclone"),i./100,1,1000); 
+for i = 20:80;
+    %[p,stats]=quantreg(y(C==0),d(C==0),i./100,1,1000); 
+    [p,stats]=quantreg(y(c=="Wildfire"),d(c=="Wildfire"),i./100,1,1000); 
     P0(i) = sum(stats.pboot(:,1)>0)./1000;
-    [p,stats]=quantreg(y(C==1),d(C==1),i./100,1,1000); 
-    %[p,stats]=quantreg(y(c=="Flooding"),d(c=="Flooding"),i./100,1,1000); 
-    P1(i) = sum(stats.pboot(:,1)>0)./1000;
+    %[p,stats]=quantreg(y(C==1),d(C==1),i./100,1,1000); 
+    %[p,stats]=quantreg(y(c=="Winter Storm"),d(c=="Winter Storm"),i./100,1,1000); 
+    %P1(i) = sum(stats.pboot(:,1)>0)./1000;
     clear p stats;
     i
 end
@@ -158,27 +169,31 @@ clear i;
 %sum(P0(3:end-2)>195 | P0(3:end-2)<5)./(95*.05) %  not so for non-storms
 %clear P0 P1;
 
-pctls = 8:92; P0 = P0(8:92);
-scatter(pctls(P0<.025 | P0>.975),P0(P0<.025 | P0>.975),100,'k','filled');
+%%
+%pctls = 8:92; P0 = P0(8:92);
+pctls = 1:99; P0 = P0(1:99);
+scatter(pctls(P0<.1 | P0>.9),P0(P0<.1 | P0>.9),100,'k','filled');
 hold on;
-scatter(pctls(P0>.025 & P0<.975),P0(P0>.025 & P0<.975),100,'k');
-plot(0:100,0.025+0.*(0:100),'k');
-plot(0:100,0.975+0.*(0:100),'k');
+scatter(pctls(P0>.1 & P0<.9),P0(P0>.1 & P0<.9),100,'k');
+plot(0:100,0.1+0.*(0:100),'k');
+plot(0:100,0.9+0.*(0:100),'k');
 box on;
-axis([2.5 97.5 0 1])
+axis([0 100 0 1])
 xlabel('Percentile','interpreter','latex')
 ylabel('Probability of Increase','interpreter','latex')
 set(gca,'ticklabelinterpreter','latex','fontsize',16)
 
-pctls = 11:89;  P1 = P1(11:89);
+%%
+%pctls = 11:89;  P1 = P1(11:89);
+pctls = 1:99; P1 = P1(1:99);
 figure;
-scatter(pctls(P1<.025 | P1>.975),P1(P1<.025 | P1>.975),100,'k','filled');
+scatter(pctls(P1<.1 | P1>.9),P1(P1<.1 | P1>.9),100,'k','filled');
 hold on;
-scatter(pctls(P1>.025 & P1<.975),P1(P1>.025 & P1<.975),100,'k');
-plot(0:100,0.025+0.*(0:100),'k');
-plot(0:100,0.975+0.*(0:100),'k');
+scatter(pctls(P1>.1 & P1<.9),P1(P1>.1 & P1<.9),100,'k');
+plot(0:100,0.1+0.*(0:100),'k');
+plot(0:100,0.9+0.*(0:100),'k');
 box on;
-axis([2.5 97.5 0 1])
+axis([0 100 0 1])
 xlabel('Percentile','interpreter','latex')
 ylabel('Probability of Increase','interpreter','latex')
 set(gca,'ticklabelinterpreter','latex','fontsize',16)
@@ -231,52 +246,57 @@ mdl = fitglm(Y,D0,'linear','Distribution','poisson'); % rate for non-SS
 r0 = table2array(mdl.Coefficients(:,1:2));
 mdl = fitglm(Y,D1,'linear','Distribution','poisson'); % rate for SS
 r1 = table2array(mdl.Coefficients(:,1:2));
-%mdl = fitglm(ones(size(Y)),D0,'linear','Distribution','poisson'); % for constant-frequency case
+%mdl = fitglm(zeros(size(Y)),D0,'linear','Distribution','poisson'); % for constant-frequency case
 %r0 = table2array(mdl.Coefficients(:,1:2));
-%mdl = fitglm(ones(size(Y)),D1,'linear','Distribution','poisson');
+%mdl = fitglm(zeros(size(Y)),D1,'linear','Distribution','poisson');
 %r1 = table2array(mdl.Coefficients(:,1:2));
 clear mdl Y D0 D1;
-[phat,pci] = mle(d(C==0)-1,'distribution','gp');
+[phat,pci] = mle(d(C==0)-1,'distribution','gp'); % use for constant magnitude case
+%p0(1:2,1) = phat; p0(1:2,2) = (pci(2,1:2)-pci(1,1:2))./3.96; % constant magnitude case
 [phat,pci] = mle(d(C==0)-1,'pdf',@(x,a,c,b)gppdf(x,a+b.*y(C==0),c),'Start',[phat(1) phat(2) 0])
 p0(1:3,1) = phat; p0(1:3,2) = (pci(2,1:3)-pci(1,1:3))./3.96;
 clear phat pci;
-[phat,pci] = mle(d(C==1)-1,'distribution','gp');
+[phat,pci] = mle(d(C==1)-1,'distribution','gp'); % use for constant magnitude case
+%p1(1:2,1) = phat; p1(1:2,2) = (pci(2,1:2)-pci(1,1:2))./3.96; % constant magnitude case
 [phat,pci] = mle(d(C==1)-1,'pdf',@(x,a,c,b)gppdf(x,a,abs(c+b.*y(C==1))),'Start',[phat(1) phat(2) 0])
 p1(1:3,1) = phat; p1(1:3,2) = (pci(2,1:3)-pci(1,1:3))./3.96;
 clear phat pci C d y ans c;
 %% for uncertainty-free version
 %p0(:,2) = 0; p1(:,2) = 0; r0(:,2); r1(:,2) = 0;
 %%
-y = 45:49;
-%y = 0:44; % for historical case
-nboot = 1000;
+%y = 46:50; % for near-future case
+%y = 45; % for present case
+y = 0:44; % for historical case
+nboot = 10000;
 for i = 1:nboot;
     b_p0i = p0(1,1)+randn(1).*p0(1,2);
     b_p0ii = p0(2,1)+randn(1).*p0(2,2);
-    b_p0iii = p0(3,1)+randn(1).*p0(3,2);
+    b_p0iii = p0(3,1)+randn(1).*p0(3,2); % comment out for constant magntiude case
     b_p1i = p1(1,1)+randn(1).*p1(1,2);
     b_p1ii = p1(2,1)+randn(1).*p1(2,2);
-    b_p1iii = p1(3,1)+randn(1).*p1(3,2);
+    b_p1iii = p1(3,1)+randn(1).*p1(3,2); % comment out for constant magntiude case
     b_r0i = r0(1,1)+randn(1).*r0(1,2);
     b_r0ii = r0(2,1)+randn(1).*r0(2,2);
     b_r1i = r1(1,1)+randn(1).*r1(1,2);
     b_r1ii = r1(2,1)+randn(1).*r1(2,2);
     N = []; S = [];
     for j = 1:length(y);
-        %b_n0 = poissrnd(exp(b_r0i+y(j).*b_r0ii));
-        %b_n1 = poissrnd(exp(b_r1i+y(j).*b_r1ii));
-        b_n0 = poissrnd(exp(b_r0i+44.*b_r0ii)); % for constant-frequency case
-        b_n1 = poissrnd(exp(b_r1i+44.*b_r1ii));
-        %b_d0 = gprnd(b_p0i+y(j).*b_p0iii,b_p0ii,1,1,b_n0);
-        %b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*y(j),1,1,b_n1);
-        b_d0 = gprnd(b_p0i+44.*b_p0iii,b_p0ii,1,1,b_n0); % for stationary case
-        b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*44,1,1,b_n1);       
+        b_n0 = poissrnd(exp(b_r0i+y(j).*b_r0ii));
+        b_n1 = poissrnd(exp(b_r1i+y(j).*b_r1ii));
+        %b_n0 = poissrnd(exp(b_r0i+44.*b_r0ii)); % for no extrapolation case
+        %b_n1 = poissrnd(exp(b_r1i+44.*b_r1ii)); % for no extrapolation case
+        b_d0 = gprnd(b_p0i+y(j).*b_p0iii,b_p0ii,1,1,b_n0);
+        b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*y(j),1,1,b_n1);
+        %b_d0 = gprnd(b_p0i,b_p0ii,1,1,b_n0); % constant magnitude case
+        %b_d1 = gprnd(b_p1i,b_p1ii,1,1,b_n1); % constant magnitude case
+        %b_d0 = gprnd(b_p0i+44.*b_p0iii,b_p0ii,1,1,b_n0); % for no extrapolation case
+        %b_d1 = gprnd(b_p1i,b_p1ii+b_p1iii.*44,1,1,b_n1);       
         N(end+1:end+b_n0) = b_d0;
         S(end+1:end+b_n1) = b_d1;
     end
     i
     ha_max(i) = max([N S]);
-    N(N>250) = 250;
+    N(N>250) = 202; % throw out events >katrina
     ha_sum_alt(i) = sum([N S]);
     hs_sum(i) = sum(S);
     clear b_*% N S;
@@ -284,40 +304,46 @@ end
 clear i j ans nboot p0 p1 r0 r1 y;
 
 clearvars -EXCEPT ha_max ha_sum_alt hs_sum;
-%save model_versionname.mat;
+save model_v4_hist.mat;
 
-%% figure 3b
-[y,x] = ksdensity(log10(T2));
-plot(x,y,'linewidth',3,'color',[.05 .5 .5])
-hold on;
-plot(linspace(3.47,3.47),linspace(0,2.5),'--k','linewidth',3)
-axis([2.9 4.1 0 2.2])
-set(gca,'ticklabelinterpreter','latex','fontsize',16,'ytick',[],'xtick',[3 3.3 3.6 4],'xticklabel',{'1','2','4','10'})
-xlabel('Historical Damages [\$Tn]','interpreter','latex')
-ylabel('Probability Density','interpreter','latex')
+%% figure 3
 
-%% figure 3a
-clear all; close all; clc; load model1.mat; A = ha_sum_alt; 
-load model_fixedrate.mat; R = ha_sum_alt; 
-load model_stationary.mat; S = ha_sum_alt;
-load model_known.mat; K = ha_sum_alt;
+clear all; close all; clc; load model_v4_fut_baseline.mat; A = ha_sum_alt; 
+load model_v4_fut_constfreq.mat; R = ha_sum_alt; 
+load model_v4_fut_constmag.mat; S = ha_sum_alt;
+load model_v4_fut_certain.mat; K = ha_sum_alt;
 clearvars -EXCEPT A R S K;
 [y,x] = ksdensity(log10(S));
-p2 = plot(x,y,'linewidth',2.5,'color',[.5 .05 .5])
+figure
+subplot(1,5,1:3)
+p2 = plot(x,y,':','linewidth',2.5,'color',[.5 .05 .5])
 hold on;
 [y,x] = ksdensity(log10(R));
-p3 = plot(x,y,'linewidth',2.5,'color',[.6 .25 .25])
+p3 = plot(x,y,'--','linewidth',2.5,'color',[.6 .25 .25])
 [y,x] = ksdensity(log10(K));
-p4 = plot(x,y,'linewidth',2.5,'color',[.5 .5 .05])
+p4 = plot(x,y,'-.','linewidth',2.5,'color',[.5 .5 .05])
 [y,x] = ksdensity(log10(A));
 p1 = plot(x,y,'linewidth',5,'color',[.05 .5 .5])
-axis([1.8 3.7 0 2.5])
-lgnd = legend([p1 p2 p3 p4],'Baseline','w/o Increased Magnitude','w/o Increased Frequency','w/o Uncertainty')
+axis([1.9 3.6 0 2.65])
+lgnd = legend([p1 p2 p3 p4],'Baseline','Stationary Magnitudes','Stationary Frequencies','Certain Parameters')
 set(lgnd,'interpreter','latex','fontsize',16,'location','northwest')
 set(gca,'ticklabelinterpreter','latex','fontsize',16,'ytick',[])
 set(gca,'xtick',[2 2.3 2.6 3 3.3 3.6],'xticklabel',{'100','200','400','1000','2000','4000'})
-xlabel('2025-2029 Damages [Billion 2024 USD]','interpreter','latex')
+xlabel('2026-2030 Damages [Billion 2024 USD]','interpreter','latex')
 ylabel('Probability Density','interpreter','latex')
+
+subplot(1,5,4:5)
+load model_v4_hist.mat; H = ha_sum_alt
+[y,x] = ksdensity(log10(H));
+plot(x,y,'linewidth',3,'color',[.05 .5 .5])
+hold on;
+plot(linspace(3.47,3.47),linspace(0,2.23),'--k','linewidth',3)
+axis([2.9 4.1 0 2.3])
+set(gca,'ticklabelinterpreter','latex','fontsize',16,'ytick',[],'xtick',[3 3.3 3.6 4],'xticklabel',{'1','2','4','10'})
+xlabel('1980-2024 Damages [\$Tn]','interpreter','latex')
+ylabel('Probability Density','interpreter','latex')
+
+exportgraphics(gcf,'Fig3.pdf','ContentType','vector')
 
 %% attribution exercise -- repeat above but normalize damages by GDP growth
 
